@@ -3,8 +3,13 @@
 
   const config = window.POLL_CONFIG || {};
   const room = config.room || 'ai-capability-20261019';
-  const base = String(config.apiBase || '').replace(/\/+$/, '');
-  const endpoint = base + '/api/polls/' + encodeURIComponent(room);
+  const base = String(config.apiBase || '').trim().replace(/\/+$/, '');
+  const fallbackBases = Array.isArray(config.apiFallbackBases) ? config.apiFallbackBases
+    .filter(value => typeof value === 'string' && value.trim()).map(value => value.trim().replace(/\/+$/, '')) : [];
+  const endpoints = Array.from(new Set([base, ...fallbackBases])).map(value => value + '/api/polls/' + encodeURIComponent(room));
+  let preferredEndpoint = endpoints[0];
+  let requestSequence = 0;
+  let preferredSequence = 0;
   const intervalMs = Math.max(1000, Number(config.pollIntervalMs) || 2000);
   const fallbackOptions = Array.isArray(config.options) ? config.options : [];
   const exclusiveIds = new Set(fallbackOptions.filter(option => option.exclusive).map(option => option.id));
@@ -14,7 +19,7 @@
   let pendingVote;
 
   class PollError extends Error {
-    constructor(message, status) { super(message); this.name = 'PollError'; this.status = status; }
+    constructor(message, status, retryable = false) { super(message); this.name = 'PollError'; this.status = status; this.retryable = retryable; }
   }
 
   function getVoterId() {
@@ -34,10 +39,31 @@
   }
 
   async function request(path, options) {
+    const sequence = ++requestSequence;
+    const candidates = [preferredEndpoint, ...endpoints.filter(value => value !== preferredEndpoint)];
+    let lastError;
+    for (const endpoint of candidates) {
+      try {
+        // options.body 已在 vote() 中序列化；切换入口时保持身份、选择与提交序号一致。
+        const data = await requestEndpoint(endpoint + path, options);
+        if (sequence >= preferredSequence) {
+          preferredEndpoint = endpoint;
+          preferredSequence = sequence;
+        }
+        return data;
+      } catch (error) {
+        lastError = error;
+        if (!error.retryable) throw error;
+      }
+    }
+    throw lastError;
+  }
+
+  async function requestEndpoint(url, options) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 9000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
     try {
-      const response = await fetch(endpoint + path, Object.assign({
+      const response = await fetch(url, Object.assign({
         cache: 'no-store',
         credentials: 'omit',
         signal: controller.signal,
@@ -45,18 +71,25 @@
       }, options || {}));
       let data;
       try { data = await response.json(); }
-      catch (_) { throw new PollError('服务返回了无法识别的数据，请稍后重试。', response.status); }
+      catch (_) {
+        if (response.status === 401 || response.status === 403) throw new PollError('投票服务的网络入口拒绝访问（HTTP ' + response.status + '），请稍后重试或联系主持人。', response.status, true);
+        const retryable = ![400, 409, 423, 429].includes(response.status);
+        if (!response.ok) throw new PollError('投票服务暂时不可用（HTTP ' + response.status + '），请稍后重试。', response.status, retryable);
+        if (/text\/html/i.test(response.headers.get('Content-Type') || '')) throw new PollError('投票服务返回了网页，请检查服务地址或网络入口。', response.status, true);
+        throw new PollError('服务返回了无法识别的数据，请稍后重试。', response.status, true);
+      }
       if (!response.ok) {
-        const message = typeof data.error === 'string' ? data.error : typeof data.message === 'string' ? data.message : '';
+        const message = data && (typeof data.error === 'string' ? data.error : typeof data.message === 'string' ? data.message : '');
+        if (response.status === 401 || response.status === 403) throw new PollError('投票服务的网络入口拒绝访问（HTTP ' + response.status + '），请稍后重试或联系主持人。', response.status, true);
         if (response.status === 409 || response.status === 423) throw new PollError(message || '本轮投票已结束。', response.status);
         if (response.status === 429) throw new PollError('提交过于频繁，请稍等片刻再试。', response.status);
-        throw new PollError(message || '暂时无法连接投票服务，请稍后重试。', response.status);
+        throw new PollError(message || '暂时无法连接投票服务，请稍后重试。', response.status, response.status >= 500);
       }
       return normalize(data);
     } catch (error) {
       if (error instanceof PollError) throw error;
-      if (error.name === 'AbortError') throw new PollError('连接超时，请检查网络后重试。');
-      throw new PollError('暂时无法连接投票服务，正在尝试重新连接。');
+      if (error.name === 'AbortError') throw new PollError('连接超时，请检查网络后重试。', undefined, true);
+      throw new PollError('暂时无法连接投票服务，正在尝试重新连接。', undefined, true);
     } finally { clearTimeout(timeout); }
   }
 

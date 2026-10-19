@@ -1,6 +1,7 @@
 /* 公开配置：这里只能填写公开 API 地址，不能放管理口令或任何服务密钥。 */
 window.POLL_CONFIG = {
-  apiBase: 'https://ai-capability-poll-api.prime-daisy-7276.chatgpt.site',
+  apiBase: 'https://advised-tools-edwards-quiz.trycloudflare.com',
+  apiFallbackBases: ['https://ai-capability-poll-api.prime-daisy-7276.chatgpt.site'],
   room: 'ai-capability-20261019',
   pollTitle: '你认为，目前 AI 已经能较好完成哪些任务？',
   criterion: '“做得较好”指：经过少量人工检查或修改，结果就能实际使用。',

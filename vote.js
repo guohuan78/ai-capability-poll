@@ -14,6 +14,7 @@
   let submitted = false;
   let dirty = false;
   let optionSignature = '';
+  const newRoundMessage = '已开始新一轮投票，请重新选择并提交你的判断。';
 
   if (poll.config.pollTitle) elements.title.textContent = poll.config.pollTitle;
   if (poll.config.criterion) elements.criterion.textContent = poll.config.criterion;
@@ -49,7 +50,8 @@
     }
   }
   function render(next) {
-    if (data && data.round === next.round && Number.isFinite(Number(data.revision)) && Number(next.revision) < Number(data.revision)) return;
+    // revision 由服务端全局递增，换轮也不能接受较早的响应。
+    if (data && Number.isFinite(Number(data.revision)) && Number(next.revision) < Number(data.revision)) return;
     const changedRound = Boolean(data && data.round !== next.round);
     data = next; hasConnected = true;
     elements.title.textContent = next.title;
@@ -57,7 +59,7 @@
     if (changedRound) {
       for (const input of elements.options.querySelectorAll('input')) input.checked = false;
       submitted = false; dirty = false;
-      setMessage('已开始新一轮投票，请重新选择并提交你的判断。', 'info');
+      setMessage(newRoundMessage, 'info');
     }
     elements.connection.className = 'connection connected';
     elements.connectionText.textContent = next.open ? '投票进行中 · 已有 ' + next.respondents + ' 人参与' : '本轮投票已结束 · 共 ' + next.respondents + ' 人参与';
@@ -91,21 +93,34 @@
     event.preventDefault();
     const choices = selected();
     if (!choices.length || isSubmitting || !data || !data.open) return;
+    const submittedRound = data.round;
     isSubmitting = true; updateButton(); setMessage('', '');
     try {
-      const next = await poll.vote(choices, data.round);
-      submitted = true; dirty = false; render(next);
+      const next = await poll.vote(choices, submittedRound);
+      render(next);
+      if (data.round !== submittedRound || next.round !== submittedRound) {
+        poll.resetPendingVote();
+        setMessage(newRoundMessage, 'info');
+        watcher.refresh();
+        return;
+      }
+      submitted = true; dirty = false;
       setMessage('提交成功！你的判断已计入现场统计。可以调整选择后重新提交。', 'success');
     } catch (error) {
-      if (error.status === 409 || error.status === 423) {
+      if (data.round !== submittedRound) {
+        poll.resetPendingVote();
+        setMessage(newRoundMessage, 'info');
+      } else if (error.status === 409 || error.status === 423) {
         poll.resetPendingVote();
         try {
-          const previousRound = data.round;
           const next = await poll.read(); render(next);
-          if (!next.open) setMessage('本轮投票已结束，当前提交未被计入。', 'error');
-          else if (next.round !== previousRound) setMessage('已切换到新一轮投票，请重新选择并提交。', 'info');
+          if (data.round !== submittedRound) setMessage(newRoundMessage, 'info');
+          else if (!data.open) setMessage('本轮投票已结束，当前提交未被计入。', 'error');
           else setMessage('提交状态已更新。请确认当前选项，再次提交。', 'info');
-        } catch (_) { setMessage(error.message + ' 请等待重新连接后确认本轮状态。', 'error'); }
+        } catch (_) {
+          if (data.round !== submittedRound) setMessage(newRoundMessage, 'info');
+          else setMessage(error.message + ' 请等待重新连接后确认本轮状态。', 'error');
+        }
       } else setMessage(error.message + ' 你的选择仍保留在本页。', 'error');
     } finally { isSubmitting = false; updateButton(); }
   });

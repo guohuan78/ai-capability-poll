@@ -44,7 +44,7 @@
   }
 
   function render(data) {
-    if (lastData && lastData.round === data.round && Number.isFinite(Number(lastData.revision)) && Number(data.revision) < Number(lastData.revision)) return;
+    if (lastData && Number.isFinite(Number(lastData.revision)) && Number(data.revision) < Number(lastData.revision)) return;
     lastData = data;
     lastUpdate = data.fetchedAt;
     title.textContent = data.title; respondents.textContent = data.respondents.toLocaleString('zh-CN');
