@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#3370FF">
+  <meta name="robots" content="noindex">
+  <title>AI 能力认知 · 现场统计</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="poll.js" defer></script>
+  <script src="present.js" defer></script>
+</head>
+<body class="present-page">
+  <main class="present-shell">
+    <header class="present-header">
+      <div><div class="eyebrow"><span class="blue-square" aria-hidden="true"></span> AI 能力认知 · 现场统计</div>
+        <h1 id="poll-title">你认为，目前 AI 已经能较好完成哪些任务？</h1>
+        <p class="criterion" id="criterion">“做得较好”指：经过少量人工检查或修改，结果就能实际使用。</p>
+      </div>
+      <button type="button" id="fullscreen-button" class="quiet-button">全屏展示</button>
+    </header>
+    <div class="present-body">
+      <section class="chart-panel" aria-label="投票统计">
+        <div class="chart-topline"><span class="pill" id="poll-state">正在连接</span><span class="chart-label">人数 / 占参与人数比例</span></div>
+        <div id="results" class="results-list" aria-busy="true"><p class="loading-note">正在读取现场统计…</p></div>
+        <p class="chart-explanation">可多选 · 单项百分比 = 选择该项人数 ÷ 参与人数 · 各项比例之和可超过 100%</p>
+      </section>
+      <aside class="join-panel">
+        <div class="respondent-count"><strong id="respondents">—</strong><span>人已参与</span></div>
+        <div class="qr-frame" id="qr-frame"><img id="join-qr" src="qr.png" alt="扫描二维码参与投票" width="280" height="280"><p id="qr-fallback" hidden>参与二维码准备中<br><a href="index.html">点击打开投票页</a></p></div>
+        <h2>扫码，说说你的判断</h2>
+        <p class="join-tip">无需登录 · 匿名参与 · 可以多选</p>
+        <a id="join-link" class="join-link" href="index.html" target="_blank" rel="noopener">打开投票页</a>
+        <button type="button" id="copy-link" class="quiet-button copy-button">复制参与链接</button>
+      </aside>
+    </div>
+    <footer class="present-footer"><div class="connection" id="connection" role="status" aria-live="polite"><span class="connection-dot" aria-hidden="true"></span><span id="connection-text">正在连接投票服务…</span></div><span id="update-time">每 2 秒同步</span></footer>
+  </main>
+</body>
+</html>

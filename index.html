@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#3370FF">
+  <meta name="description" content="现场匿名投票：你认为，目前 AI 已经能较好完成哪些任务？">
+  <title>AI 能力认知 · 现场投票</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="poll.js" defer></script>
+  <script src="vote.js" defer></script>
+</head>
+<body class="vote-page">
+  <main class="vote-shell">
+    <header class="vote-header">
+      <div class="eyebrow"><span class="blue-square" aria-hidden="true"></span> AI 能力认知 · 现场投票</div>
+      <h1 id="poll-title">你认为，目前 AI 已经能较好完成哪些任务？</h1>
+      <p class="criterion" id="criterion">“做得较好”指：经过少量人工检查或修改，结果就能实际使用。</p>
+      <div class="vote-meta"><span class="pill">可多选</span><span>匿名参与 · 可修改后重新提交</span></div>
+    </header>
+
+    <div class="connection" id="connection" role="status" aria-live="polite"><span class="connection-dot" aria-hidden="true"></span><span id="connection-text">正在连接投票服务…</span></div>
+
+    <form id="vote-form" class="vote-form">
+      <fieldset id="choices-fieldset" disabled>
+        <legend class="sr-only">请选择你认为 AI 已经能较好完成的任务</legend>
+        <div id="options" class="options-list"></div>
+      </fieldset>
+      <p class="selection-hint" id="selection-hint">前六项可以多选；后两项只能单独选择。</p>
+      <div id="form-message" class="form-message" role="status" aria-live="polite" hidden></div>
+      <button type="submit" id="submit-button" class="primary-button" disabled>提交判断</button>
+    </form>
+    <p class="privacy-note">不收集姓名或手机号。随机浏览器编号和提交序号仅用于识别、更新本轮提交；同一浏览器重新提交会覆盖原选择。</p>
+    <footer class="vote-footer"><a href="present.html">查看现场统计</a><span>AI 工作方式 · 大组会</span></footer>
+  </main>
+</body>
+</html>
