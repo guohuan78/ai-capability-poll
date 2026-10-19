@@ -2,37 +2,40 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#3370FF">
-  <meta name="description" content="现场匿名投票：你认为，目前 AI 已经能较好完成哪些任务？">
-  <title>AI 能力认知 · 现场投票</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="config.js?v=20261019-1428" defer></script>
-  <script src="poll.js?v=20261019-1428" defer></script>
-  <script src="vote.js?v=20261019-1428" defer></script>
+  <meta name="robots" content="noindex">
+  <title>AI 能力认知 · 现场统计</title>
+  <link rel="stylesheet" href="styles.css?v=20261019-1454">
+  <script src="config.js?v=20261019-1454" defer></script>
+  <script src="poll.js?v=20261019-1454" defer></script>
+  <script src="present.js?v=20261019-1454" defer></script>
 </head>
-<body class="vote-page">
-  <main class="vote-shell">
-    <header class="vote-header">
-      <div class="eyebrow"><span class="blue-square" aria-hidden="true"></span> AI 能力认知 · 现场投票</div>
-      <h1 id="poll-title">你认为，目前 AI 已经能较好完成哪些任务？</h1>
-      <p class="criterion" id="criterion">“做得较好”指：经过少量人工检查或修改，结果就能实际使用。</p>
-      <div class="vote-meta"><span class="pill">可多选</span><span>匿名参与 · 可修改后重新提交</span></div>
+<body class="present-page">
+  <main class="present-shell">
+    <header class="present-header">
+      <div><div class="eyebrow"><span class="blue-square" aria-hidden="true"></span> AI 能力认知 · 现场统计</div>
+        <h1 id="poll-title">现场投票：AI 已经能做好哪些任务？</h1>
+        <p class="criterion" id="criterion">给定目标、资料与必要环境，AI 自主交付可用成果。</p>
+      </div>
+      <nav class="present-actions" aria-label="投票操作"><a href="vote.html" class="quiet-button">参与投票</a><button type="button" id="fullscreen-button" class="quiet-button">全屏展示</button></nav>
     </header>
-
-    <div class="connection" id="connection" role="status" aria-live="polite"><span class="connection-dot" aria-hidden="true"></span><span id="connection-text">正在连接投票服务…</span></div>
-
-    <form id="vote-form" class="vote-form">
-      <fieldset id="choices-fieldset" disabled>
-        <legend class="sr-only">请选择你认为 AI 已经能较好完成的任务</legend>
-        <div id="options" class="options-list"></div>
-      </fieldset>
-      <p class="selection-hint" id="selection-hint">前六项可以多选；后两项只能单独选择。</p>
-      <div id="form-message" class="form-message" role="status" aria-live="polite" hidden></div>
-      <button type="submit" id="submit-button" class="primary-button" disabled>提交判断</button>
-    </form>
-    <p class="privacy-note">不收集姓名或手机号。随机浏览器编号和提交序号仅用于识别、更新本轮提交；同一浏览器重新提交会覆盖原选择。</p>
-    <footer class="vote-footer"><a href="present.html">查看现场统计</a><span>AI 工作方式 · 大组会</span></footer>
+    <div class="present-body">
+      <section class="chart-panel" aria-label="投票统计">
+        <div class="chart-topline"><span class="pill" id="poll-state">正在连接</span><span class="chart-label">人数 / 占参与人数比例</span></div>
+        <div id="results" class="results-list" aria-busy="true"><p class="loading-note">正在读取现场统计…</p></div>
+        <p class="chart-explanation">A–J 可多选，K / L 需单独选择 · 单项百分比 = 选择该项人数 ÷ 参与人数 · 各项比例之和可超过 100%</p>
+      </section>
+      <aside class="join-panel">
+        <div class="respondent-count"><strong id="respondents">—</strong><span>人已参与</span></div>
+        <div class="qr-frame" id="qr-frame"><img id="join-qr" src="qr.png?v=20261019-1454" alt="扫描二维码参与投票" width="280" height="280"><p id="qr-fallback" hidden>参与二维码准备中<br><a href="vote.html">点击打开投票页</a></p></div>
+        <h2>扫码，说说你的判断</h2>
+        <p class="join-tip">无需登录 · 匿名参与 · A–J 可多选</p>
+        <a id="join-link" class="join-link" href="vote.html" target="_blank" rel="noopener">打开投票页</a>
+        <button type="button" id="copy-link" class="quiet-button copy-button">复制参与链接</button>
+      </aside>
+    </div>
+    <footer class="present-footer"><div class="connection" id="connection" role="status" aria-live="polite"><span class="connection-dot" aria-hidden="true"></span><span id="connection-text">正在连接投票服务…</span></div><span id="update-time">每 2 秒同步</span></footer>
   </main>
 </body>
 </html>

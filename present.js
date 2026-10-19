@@ -31,11 +31,19 @@
     for (const option of options) {
       const row = document.createElement('div'); row.className = 'result-row' + (option.exclusive ? ' exclusive-result' : '');
       const topline = document.createElement('div'); topline.className = 'result-topline';
+      const copy = document.createElement('div'); copy.className = 'result-copy';
+      const heading = document.createElement('div'); heading.className = 'result-heading';
+      const letter = document.createElement('span'); letter.className = 'result-letter'; letter.textContent = option.id.toUpperCase();
       const label = document.createElement('span'); label.className = 'result-label'; label.textContent = option.label;
+      heading.append(letter, label); copy.append(heading);
+      if (option.description) {
+        const description = document.createElement('span'); description.className = 'result-description'; description.textContent = option.description;
+        copy.append(description);
+      }
       const metrics = document.createElement('span'); metrics.className = 'result-metrics';
       const count = document.createElement('strong'); count.textContent = '—';
       const percent = document.createElement('span'); percent.textContent = '—';
-      metrics.append(count, percent); topline.append(label, metrics);
+      metrics.append(count, percent); topline.append(copy, metrics);
       const track = document.createElement('div'); track.className = 'bar-track';
       const fill = document.createElement('div'); fill.className = 'bar-fill'; track.append(fill);
       row.append(topline, track); results.append(row);
@@ -48,6 +56,7 @@
     lastData = data;
     lastUpdate = data.fetchedAt;
     title.textContent = data.title; respondents.textContent = data.respondents.toLocaleString('zh-CN');
+    if (typeof data.criterion === 'string') criterion.textContent = data.criterion;
     ensureRows(data.options);
     results.setAttribute('aria-busy', 'false');
     for (const option of data.options) {
@@ -57,7 +66,7 @@
       row.count.textContent = count.toLocaleString('zh-CN') + ' 人';
       row.percent.textContent = percent.toFixed(0) + '%';
       row.fill.style.width = Math.min(100, percent) + '%';
-      row.row.setAttribute('aria-label', option.label + '，' + count + ' 人，' + percent.toFixed(0) + '%');
+      row.row.setAttribute('aria-label', option.id.toUpperCase() + '，' + option.label + (option.description ? '，' + option.description : '') + '，' + count + ' 人，' + percent.toFixed(0) + '%');
     }
     pollState.textContent = data.open ? '投票进行中' : '投票已结束';
     pollState.className = 'pill' + (data.open ? '' : ' closed-pill');

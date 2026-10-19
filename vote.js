@@ -44,9 +44,15 @@
       input.type = 'checkbox'; input.name = 'choices'; input.value = option.id;
       input.checked = previous.has(option.id); input.dataset.exclusive = String(option.exclusive);
       const mark = document.createElement('span'); mark.className = 'option-mark'; mark.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('span'); copy.className = 'option-copy';
       const text = document.createElement('span'); text.className = 'option-label'; text.textContent = option.label;
-      const letter = document.createElement('span'); letter.className = 'option-letter'; letter.textContent = option.id;
-      label.append(input, mark, text, letter); elements.options.append(label);
+      const letter = document.createElement('span'); letter.className = 'option-letter'; letter.textContent = option.id.toUpperCase();
+      copy.append(text);
+      if (option.description) {
+        const description = document.createElement('span'); description.className = 'option-description'; description.textContent = option.description;
+        copy.append(description);
+      }
+      label.append(input, mark, letter, copy); elements.options.append(label);
     }
   }
   function render(next) {
@@ -55,6 +61,7 @@
     const changedRound = Boolean(data && data.round !== next.round);
     data = next; hasConnected = true;
     elements.title.textContent = next.title;
+    if (typeof next.criterion === 'string') elements.criterion.textContent = next.criterion;
     renderOptions(next.options);
     if (changedRound) {
       for (const input of elements.options.querySelectorAll('input')) input.checked = false;

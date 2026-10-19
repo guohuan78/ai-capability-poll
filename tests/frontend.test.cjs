@@ -7,13 +7,13 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { randomUUID } = require('node:crypto');
 
-const options = [
-  { id: 'A', label: '选项 A' }, { id: 'B', label: '选项 B' },
-  { id: 'G', label: '选项 G', exclusive: true }, { id: 'H', label: '选项 H', exclusive: true }
-];
+const configContext = { window: {} };
+runScript('config.js', configContext);
+const configuredPoll = configContext.window.POLL_CONFIG;
+const options = Array.from(configuredPoll.options, option => ({ ...option }));
 function snapshot(round = 'round-1', revision = 1, extra = {}) {
   return { round, revision, respondents: 0, open: true, title: round, options,
-    counts: { A: 0, B: 0, G: 0, H: 0 }, fetchedAt: new Date(), ...extra };
+    counts: Object.fromEntries(options.map(option => [option.id, 0])), fetchedAt: new Date(), ...extra };
 }
 function deferred() {
   let resolve, reject;
@@ -48,6 +48,11 @@ class Element {
   }
 }
 class Input extends Element { constructor() { super('input'); } }
+function descendants(element, className) {
+  return element.children.flatMap(child => [
+    ...(child.classList.contains(className) ? [child] : []), ...descendants(child, className)
+  ]);
+}
 
 function page(script, overrides = {}) {
   const elements = new Map();
@@ -197,18 +202,73 @@ test('正常提交、修改提交以及互斥选项仍可使用', async () => {
   assert.deepEqual(ui.selected(), ['A', 'B']); await ui.submit();
   assert.match(ui.get('form-message').textContent, /提交成功/);
   assert.equal(ui.get('submit-button').disabled, true);
-  ui.select('G'); assert.deepEqual(ui.selected(), ['G']);
+  ui.select('K'); assert.deepEqual(ui.selected(), ['K']);
   assert.equal(ui.get('submit-button').textContent, '更新我的判断');
-  ui.select('H'); assert.deepEqual(ui.selected(), ['H']);
+  ui.select('L'); assert.deepEqual(ui.selected(), ['L']);
   ui.select('A'); assert.deepEqual(ui.selected(), ['A']);
   await ui.submit(); assert.match(ui.get('form-message').textContent, /提交成功/);
+});
+
+test('十二项公开配置与题目、标准、副文案逐字一致', () => {
+  assert.equal(configuredPoll.pollTitle, '现场投票：AI 已经能做好哪些任务？');
+  assert.equal(configuredPoll.criterion, '给定目标、资料与必要环境，AI 自主交付可用成果。');
+  assert.equal(configuredPoll.participationUrl, 'https://guohuan78.github.io/ai-capability-poll/vote.html');
+  assert.deepEqual(options.map(option => [option.id, option.label, option.description || '', Boolean(option.exclusive)]), [
+    ['A', '制作精美的 PPT', '', false], ['B', '生成精美图表', '', false],
+    ['C', '生成精美的 MV', '', false], ['D', '生成精致的三维模型', '', false],
+    ['E', '撰写论文', '', false], ['F', '生成技术文章', '获得可观关注与阅读', false],
+    ['G', '搭建并上线个人网站', '', false], ['H', '线上 Bug 自主端到端修复', '定位、修改、测试并提交代码', false],
+    ['I', '为手机编写可运行的操作系统', '', false], ['J', '嵌入式开发板闭环开发', '编码、部署、运行与验证', false],
+    ['K', '以上任务暂无符合预期', '', true], ['L', '了解不足，暂不判断', '', true]
+  ]);
+});
+
+test('A–J 全部可多选，K 与 L 分别与所有选项互斥', () => {
+  const ui = page('vote.js'); ui.render(snapshot());
+  for (const id of 'ABCDEFGHIJ') ui.select(id);
+  assert.deepEqual(ui.selected(), Array.from('ABCDEFGHIJ'));
+  ui.select('K'); assert.deepEqual(ui.selected(), ['K']);
+  ui.select('L'); assert.deepEqual(ui.selected(), ['L']);
+  ui.select('J'); assert.deepEqual(ui.selected(), ['J']);
+  ui.select('A'); assert.deepEqual(ui.selected(), ['A', 'J']);
+});
+
+test('投票页分离展示字母、主文案和副文案，并使用服务端标准', () => {
+  const ui = page('vote.js'); ui.render(snapshot('round-1', 1, { criterion: configuredPoll.criterion }));
+  assert.deepEqual(descendants(ui.get('options'), 'option-letter').map(node => node.textContent), Array.from('ABCDEFGHIJKL'));
+  assert.equal(descendants(ui.get('options'), 'option-label').length, 12);
+  assert.deepEqual(descendants(ui.get('options'), 'option-description').map(node => node.textContent), [
+    '获得可观关注与阅读', '定位、修改、测试并提交代码', '编码、部署、运行与验证'
+  ]);
+  assert.equal(ui.get('criterion').textContent, configuredPoll.criterion);
+});
+
+test('统计页展示十二项字母与副文案，每项零人数仍明确显示', () => {
+  const ui = page('present.js'); ui.render(snapshot('round-1', 1, { criterion: configuredPoll.criterion }));
+  assert.equal(ui.get('results').children.length, 12);
+  assert.deepEqual(descendants(ui.get('results'), 'result-letter').map(node => node.textContent), Array.from('ABCDEFGHIJKL'));
+  assert.equal(descendants(ui.get('results'), 'result-description').length, 3);
+  for (const metrics of descendants(ui.get('results'), 'result-metrics')) {
+    assert.equal(metrics.children[0].textContent, '0 人');
+    assert.equal(metrics.children[1].textContent, '0%');
+  }
+  assert.equal(ui.get('criterion').textContent, configuredPoll.criterion);
+  assert.match(ui.get('results').children[7].attributes['aria-label'], /H，线上 Bug 自主端到端修复，定位、修改、测试并提交代码，0 人/);
+});
+
+test('旧接口未返回 criterion 时页面保留配置中的标准', () => {
+  for (const script of ['vote.js', 'present.js']) {
+    const ui = page(script, { config: { criterion: configuredPoll.criterion } });
+    ui.render(snapshot()); assert.equal(ui.get('criterion').textContent, configuredPoll.criterion);
+  }
 });
 
 function transport({ storageBlocked = false, config = {}, timers = {} } = {}) {
   const values = new Map(), calls = [], responses = [];
   const context = {
     window: { POLL_CONFIG: { apiBase: 'https://api.test', room: 'room', options, ...config }, crypto: { randomUUID }, addEventListener() {}, removeEventListener() {} },
-    document: { addEventListener() {}, removeEventListener() {} }, AbortController,
+    document: { addEventListener() {}, removeEventListener() {} }, AbortController, URL,
+    location: { href: 'https://frontend.test/ai-capability-poll/' },
     setTimeout: timers.setTimeout || setTimeout, clearTimeout: timers.clearTimeout || clearTimeout,
     localStorage: {
       getItem(key) { if (storageBlocked) throw new Error('denied'); return values.get(key) || null; },
@@ -391,4 +451,20 @@ test('JSON 统计结构错误不切换入口', async () => {
   api.responses.push(Response.json({ round: 'invalid' }));
   await assert.rejects(api.poll.read(), /统计数据格式/);
   assert.equal(api.calls.length, 1);
+});
+
+test('API 归一化保留 criterion 与独立 description，并识别 K/L 互斥', async () => {
+  const api = transport({ config: { criterion: '配置标准' } });
+  api.responses.push(Response.json(snapshot('round-1', 1, { criterion: configuredPoll.criterion })));
+  const data = await api.poll.read();
+  assert.equal(data.criterion, configuredPoll.criterion);
+  assert.equal(data.options.find(option => option.id === 'F').label, '生成技术文章');
+  assert.equal(data.options.find(option => option.id === 'F').description, '获得可观关注与阅读');
+  assert.equal(data.options.find(option => option.id === 'A').description, '');
+  assert.deepEqual(Array.from(api.poll.exclusiveIds), ['K', 'L']);
+  assert.equal((await api.poll.read()).criterion, '配置标准');
+});
+
+test('参与链接未配置时指向独立投票页 vote.html', () => {
+  assert.equal(transport().poll.joinUrl(), 'https://frontend.test/ai-capability-poll/vote.html');
 });

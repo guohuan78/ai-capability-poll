@@ -98,12 +98,15 @@
       throw new PollError('统计数据格式不正确，请稍后重试。');
     }
     const options = data.options.filter(option => option && typeof option.id === 'string' && typeof option.label === 'string')
-      .map(option => ({ id: option.id, label: option.label, exclusive: Boolean(option.exclusive) || exclusiveIds.has(option.id) }));
+      .map(option => ({ id: option.id, label: option.label,
+        description: typeof option.description === 'string' ? option.description : '',
+        exclusive: Boolean(option.exclusive) || exclusiveIds.has(option.id) }));
     if (!options.length) throw new PollError('本轮投票尚未设置选项。');
     const respondents = Math.max(0, Math.floor(Number(data.respondents)));
     const counts = {};
     for (const option of options) counts[option.id] = Math.max(0, Math.floor(Number(data.counts && data.counts[option.id]) || 0));
-    return { title: String(data.title || config.pollTitle || ''), options, counts, respondents,
+    return { title: String(data.title || config.pollTitle || ''),
+      criterion: typeof data.criterion === 'string' ? data.criterion : String(config.criterion || ''), options, counts, respondents,
       open: data.open !== false, round: data.round, revision: data.revision, fetchedAt: new Date() };
   }
 
@@ -150,7 +153,7 @@
   }
 
   function joinUrl() {
-    return config.participationUrl || new URL('./index.html', location.href).href;
+    return config.participationUrl || new URL('./vote.html', location.href).href;
   }
 
   window.LivePoll = { config, read, vote, resetPendingVote, watch, formatTime, joinUrl, exclusiveIds, fallbackOptions, PollError };
